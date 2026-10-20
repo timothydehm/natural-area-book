@@ -33,10 +33,10 @@ jobs:
       - name: Collect the site files
         run: |
           mkdir -p _site/photos
-          cp -r index.html style.css app.js data.js fonts .nojekyll _site/
+          cp -r index.html crop.html style.css app.js data.js fonts .nojekyll _site/
           cp -r photos/web _site/photos/
           # make browsers fetch the new content instead of an old cached copy
-          sed -i -E "s/(data\.js|app\.js|style\.css)\"/\1?v=${GITHUB_RUN_ID}\"/g" _site/index.html
+          sed -i -E "s/(data\.js|app\.js|style\.css)\"/\1?v=${GITHUB_RUN_ID}\"/g" _site/index.html _site/crop.html
           grep -E "data\.js|app\.js|style\.css" _site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

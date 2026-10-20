@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Crop Helper</title>
+<style>
+:root{--ink:#25231f;--muted:#77726a;--line:#e3ded3;--paper:#fffdf8;--acc:#2b4825;--acc2:#a06e0f}
+*{box-sizing:border-box}
+body{margin:0;background:#f1eee7;color:var(--ink);font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
+header{padding:18px 24px;border-bottom:1px solid var(--line);background:var(--paper);display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center}
+h1{font:600 18px system-ui;margin:0 12px 0 0}
+select,button,input[type=text]{font:inherit;padding:7px 10px;border:1px solid #cfc9bc;border-radius:7px;background:#fff;color:var(--ink)}
+button{cursor:pointer}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.wrap{padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.frames{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end}
+.fr{display:flex;flex-direction:column;gap:8px}
+.fr .cap{font-size:13px;color:var(--muted)}
+.fr .cap b{color:var(--ink);font-weight:600}
+.box{position:relative;overflow:hidden;background:#d9d5ca;border-radius:2px;box-shadow:0 1px 6px rgba(0,0,0,.15);cursor:grab;touch-action:none}
+.box.drag{cursor:grabbing}
+.box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none;pointer-events:none;
+  object-position:var(--x) var(--y);transform:scale(var(--z));transform-origin:var(--x) var(--y)}
+.box .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:#77726a;font-size:13px}
+.side{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;position:sticky;top:16px}
+.side h2{font:600 13px system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.code{display:flex;gap:8px;align-items:center;margin:4px 0 6px}
+.code output{flex:1;font:600 20px ui-monospace,Consolas,monospace;padding:8px 10px;background:#f4f1ea;border-radius:7px;text-align:center}
+.row{margin:16px 0}
+label.sl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+input[type=range]{width:100%}
+.note{font-size:13px;color:var(--muted)}
+.dpi{font-size:13px;margin-top:4px}
+.drop{border:2px dashed #cfc9bc;border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:13px}
+.drop.over{border-color:var(--acc);color:var(--acc)}
+.file{font:13px ui-monospace,Consolas,monospace;word-break:break-all;background:#f4f1ea;padding:6px 8px;border-radius:6px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 14px;border-radius:8px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}.side{position:static}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Photo Crop Helper</h1>
+  <label>Pattern <select id="pat"><option value="">— choose —</option></select></label>
+  <button id="pickBtn">Use a different photo…</button>
+  <input type="file" id="file" accept="image/*" hidden>
+  <span class="note" id="status"></span>
+</header>
+
+<div class="wrap">
+  <section>
+    <div class="frames" id="frames"></div>
+    <p class="note" style="margin-top:22px;max-width:60em">Drag any preview to move the photo. Scroll over it (or use the slider) to zoom. All three previews use the same code, so you can check how one crop works on a computer, a wide screen and a phone. The printed page has the same shape as the computer view.</p>
+  </section>
+
+  <aside class="side">
+    <h2>Photo crop code</h2>
+    <div class="code"><output id="code">x50 y50 z1.00</output><button class="primary" id="copy">Copy</button></div>
+    <div class="note" id="where">Paste it into the <b>Photo crop</b> column for this pattern.</div>
+    <div class="dpi" id="dpi"></div>
+
+    <div class="row">
+      <label class="sl"><span>Left ↔ right</span><span id="xv">50</span></label>
+      <input type="range" id="x" min="0" max="100" step="1" value="50">
+      <label class="sl"><span>Top ↕ bottom</span><span id="yv">50</span></label>
+      <input type="range" id="y" min="0" max="100" step="1" value="50">
+      <label class="sl"><span>Zoom</span><span id="zv">1.00</span></label>
+      <input type="range" id="z" min="1" max="4" step="0.01" value="1">
+    </div>
+    <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="reset">Center</button>
+      <button id="revert" hidden>Back to the sheet's code</button>
+    </div>
+    <div class="row">
+      <h2>Or paste a code to preview</h2>
+      <div style="display:flex;gap:8px"><input type="text" id="paste" placeholder="x40 y60 z1.20" style="flex:1;min-width:0"><button id="apply">Show</button></div>
+    </div>
+    <div class="row" id="fileRow" hidden>
+      <h2>Photo filename</h2>
+      <div class="file" id="fname"></div>
+      <div class="note" style="margin-top:6px">Put this exact name in the <b>Photo</b> column, and upload the file to the <b>photos</b> folder.</div>
+    </div>
+    <div class="drop" id="drop">Or drop a photo anywhere on this page</div>
+  </aside>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js" onerror="window.BOOK_DATA=null"></script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const D = window.BOOK_DATA || null;
+// Frame shapes that match the site: photo half of a 1440×900 and a 1920×1080 screen,
+// a 390px-wide phone, and the printed page's photo (5 × 7.7 in, same shape as the 1440 view).
+const FRAMES = [
+  {key: 'desk', label: 'Computer · printed page', w: 584, h: 900, show: 420},
+  {key: 'wide', label: 'Wide screen', w: 824, h: 1080, show: 420},
+  {key: 'phone', label: 'Phone', w: 390, h: 265, show: 220},
+];
+let c = {x: 50, y: 50, z: 1}, orig = null, src = null, natural = null, currentNum = null;
+
+// --- build frames
+$('#frames').innerHTML = FRAMES.map(f => {
+  const h = f.show, w = Math.round(f.show * f.w / f.h);
+  return `<div class="fr"><div class="box" data-k="${f.key}" style="width:${w}px;height:${h}px"><div class="empty">Choose a pattern or drop a photo</div></div>
+    <div class="cap"><b>${f.label}</b></div></div>`;
+}).join('');
+const boxes = [...document.querySelectorAll('.box')];
+
+// --- patterns from the site's data
+if (D) {
+  const opts = D.patterns.map(p => `<option value="${p.num}">${p.num}. ${p.name}${p.photo ? '' : ' (no photo yet)'}</option>`).join('');
+  $('#pat').insertAdjacentHTML('beforeend', opts);
+  $('#status').textContent = `${D.patterns.length} patterns loaded from the site`;
+  const cov = D.settings && D.settings.coverPhoto;
+  if (cov) $('#pat').insertAdjacentHTML('afterbegin', '<option value="cover">Cover photo (home page)</option>');
+} else {
+  $('#pat').disabled = true;
+  $('#status').textContent = 'Site data not found. Keep this file next to data.js, or drop a photo to start.';
+}
+
+const parse = s => { const o = {x: 50, y: 50, z: 1}; String(s || '').toLowerCase().replace(/([xyz])\s*=?\s*(-?\d+(?:\.\d+)?)/g, (_, k, v) => o[k] = +v); return clamp(o); };
+const clamp = o => ({x: Math.min(100, Math.max(0, o.x)), y: Math.min(100, Math.max(0, o.y)), z: Math.min(4, Math.max(1, o.z))});
+const code = o => `x${Math.round(o.x)} y${Math.round(o.y)} z${o.z.toFixed(2)}`;
+
+function setPhoto(url, fname) {
+  src = url; natural = null;
+  boxes.forEach(b => { b.innerHTML = `<img alt="">`; const im = b.querySelector('img');
+    im.onload = () => { natural = {w: im.naturalWidth, h: im.naturalHeight}; showDpi(); };
+    im.onerror = () => { b.innerHTML = `<div class="empty">Couldn't load ${fname || 'the photo'}.<br>Run “Update site” after uploading it, or use “Use a different photo…”.</div>`; };
+    im.src = url; });
+  $('#fileRow').hidden = !fname; $('#fname').textContent = fname || '';
+  apply();
+}
+function apply() {
+  c = clamp(c);
+  boxes.forEach(b => { b.style.setProperty('--x', c.x + '%'); b.style.setProperty('--y', c.y + '%'); b.style.setProperty('--z', c.z); });
+  $('#code').textContent = code(c);
+  $('#x').value = c.x; $('#y').value = c.y; $('#z').value = c.z;
+  $('#xv').textContent = Math.round(c.x); $('#yv').textContent = Math.round(c.y); $('#zv').textContent = c.z.toFixed(2);
+  $('#revert').hidden = !orig || code(orig) === code(c);
+  showDpi();
+}
+// sharpness of the printed page photo (5 × 7.7 in), from the photo's pixel size
+function showDpi() {
+  const el = $('#dpi');
+  if (!natural) { el.textContent = ''; return; }
+  // the site uses copies resized to 1800 px on the long side, so judge sharpness on that size
+  const f = Math.min(1, 1800 / Math.max(natural.w, natural.h)), w = natural.w * f, h = natural.h * f;
+  const scale = Math.max(5 / w, 7.7 / h) * c.z;   // inches per pixel
+  const dpi = Math.round(1 / scale);
+  el.textContent = `Printed sharpness: about ${dpi} dpi` + (dpi < 150 ? ' (will look soft in print)' : dpi < 200 ? ' (okay)' : ' (good)');
+  el.style.color = dpi < 150 ? '#b3261e' : dpi < 200 ? '#8a6200' : '#2e7d32';
+}
+
+function loadPattern(v) {
+  currentNum = v; orig = null;
+  if (!v || !D) return;
+  let photo, cropCode, label;
+  if (v === 'cover') { photo = D.settings.coverPhoto; cropCode = D.settings.coverCrop; label = 'Cover photo crop on the Book tab'; }
+  else { const p = D.patterns.find(p => String(p.num) === v); photo = p.photo; cropCode = p.crop; label = `Photo crop column for pattern ${p.num}`; }
+  $('#where').innerHTML = `Paste it into the <b>${label}</b>.`;
+  c = parse(cropCode); orig = cropCode ? parse(cropCode) : {x: 50, y: 50, z: 1};
+  if (photo) {
+    const url = (D.photos && D.photos[photo]) || ('photos/' + photo);
+    setPhoto(url, photo);
+  } else {
+    boxes.forEach(b => b.innerHTML = '<div class="empty">No photo in the sheet for this pattern yet.<br>Use “Use a different photo…” to try one.</div>');
+    $('#fileRow').hidden = true; natural = null; apply();
+  }
+}
+$('#pat').onchange = e => loadPattern(e.target.value);
+
+// --- local photo
+function useFile(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  setPhoto(URL.createObjectURL(f), f.name);
+  if (!currentNum) $('#where').innerHTML = 'Paste it into the <b>Photo crop</b> column for the pattern.';
+}
+$('#pickBtn').onclick = () => $('#file').click();
+$('#file').onchange = e => { useFile(e.target.files[0]); e.target.value = ''; };
+let depth = 0;
+addEventListener('dragenter', e => { e.preventDefault(); depth++; $('#drop').classList.add('over'); });
+addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('#drop').classList.remove('over'); } });
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => { e.preventDefault(); depth = 0; $('#drop').classList.remove('over'); useFile(e.dataTransfer.files[0]); });
+
+// --- drag to pan, scroll to zoom (same behavior on every preview)
+boxes.forEach(b => {
+  let st = null;
+  b.addEventListener('pointerdown', e => { if (!src) return; b.setPointerCapture(e.pointerId); b.classList.add('drag');
+    st = {x: e.clientX, y: e.clientY, c: {...c}, w: b.clientWidth, h: b.clientHeight}; });
+  b.addEventListener('pointermove', e => { if (!st) return;
+    c = {x: st.c.x - (e.clientX - st.x) / st.w * 100 / st.c.z, y: st.c.y - (e.clientY - st.y) / st.h * 100 / st.c.z, z: st.c.z}; apply(); });
+  const end = () => { st = null; b.classList.remove('drag'); };
+  b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+  b.addEventListener('wheel', e => { if (!src) return; e.preventDefault(); c.z *= Math.exp(-e.deltaY * 0.0015); apply(); }, {passive: false});
+});
+['x', 'y', 'z'].forEach(k => $('#' + k).oninput = e => { c[k] = +e.target.value; apply(); });
+$('#reset').onclick = () => { c = {x: 50, y: 50, z: 1}; apply(); };
+$('#revert').onclick = () => { if (orig) { c = {...orig}; apply(); } };
+$('#apply').onclick = () => { c = parse($('#paste').value); apply(); };
+$('#paste').onkeydown = e => { if (e.key === 'Enter') $('#apply').click(); };
+let tt;
+const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 1600); };
+$('#copy').onclick = async () => {
+  const t = code(c);
+  try { await navigator.clipboard.writeText(t); toast('Copied ' + t); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Copied ' + t); }
+};
+apply();
+})();
+</script>
+</body>
+</html>

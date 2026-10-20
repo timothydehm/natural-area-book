@@ -36,6 +36,8 @@ Upload the photo to `photos/`, put its exact filename in the **Photo** column, a
 - `x` and `y` (0 to 100) choose which part of the photo stays in view.
 - `z` (1 to 4) zooms in.
 
+**Photo Crop Helper:** open `crop.html` on the published site (`…github.io/natural-area-book/crop.html`), or double-click it in this folder. Pick a pattern, then drag and zoom. It previews the crop on a computer, a wide screen and a phone, warns if the photo will print soft, and gives you the code to copy into **Photo crop**.
+
 ## Spreadsheet tabs the site reads
 
 - **Patterns:** one row per pattern. The Notes column is never published.
