@@ -32,18 +32,25 @@ def txt(v):
 
 def open_workbook():
     sheet_id = os.environ.get("SHEET_ID", "").strip()
+    m = re.search(r"/d/([A-Za-z0-9_-]{20,})", sheet_id)  # accept a full sheet link too
+    if m:
+        sheet_id = m.group(1)
     if sheet_id:
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
         print(f"Reading Google Sheet {sheet_id}")
-        with urllib.request.urlopen(url, timeout=60) as r:
-            body = r.read()
+        source_label = f"Google Sheet ({sheet_id})"
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                body = r.read()
+        except Exception as e:
+            sys.exit(f"Couldn't download the Google Sheet ({e}). Check the SHEET_ID and that the sheet is shared as 'Anyone with the link can view'.")
         if not body.startswith(b"PK"):
             sys.exit("Google didn't return a spreadsheet. Is the sheet shared as 'Anyone with the link can view'?")
-        return openpyxl.load_workbook(io.BytesIO(body), data_only=True), "Google Sheet"
+        return openpyxl.load_workbook(io.BytesIO(body), data_only=True), source_label
     files = sorted((ROOT / "content").glob("*.xlsx"))
     if not files:
         sys.exit("No SHEET_ID set and no .xlsx in content/.")
-    print(f"Reading {files[0].name}")
+    print(f"No SHEET_ID variable found. Reading {files[0].name} from content/ instead.")
     return openpyxl.load_workbook(files[0], data_only=True), files[0].name
 
 
@@ -113,10 +120,15 @@ def main():
         if p["photo"] and p["photo"] not in photos:
             print(f"  WARNING: pattern {p['num']}: photo '{p['photo']}' is not in photos/")
     data = {"settings": settings, "patterns": pats, "photos": photos, "source": source,
-            "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
+            "updated": datetime.now(timezone.utc).isoformat(timespec="minutes")}
     (ROOT / "data.js").write_text("window.BOOK_DATA = " + json.dumps(data, ensure_ascii=False, indent=1) + ";\n",
                                   encoding="utf-8")
-    print(f"Wrote data.js: {len(pats)} patterns, {len(photos)} photos")
+    print(f"Wrote data.js: {len(pats)} patterns, {len(photos)} photos, read from {source}")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:  # shows on the run's page in the Actions tab
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write(f"### Site content updated\n\n- **Read from:** {source}\n- **Patterns:** {len(pats)}\n"
+                    f"- **Photos:** {len(photos)}\n- **First pattern:** {pats[0]['num']}. {pats[0]['name']}\n")
 
 
 if __name__ == "__main__":

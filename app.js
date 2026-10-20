@@ -13,6 +13,7 @@ const partName = k => S.parts[k].name;
 const WORDS = 'ZERO ONE TWO THREE FOUR FIVE SIX SEVEN EIGHT NINE TEN ELEVEN TWELVE THIRTEEN FOURTEEN FIFTEEN SIXTEEN SEVENTEEN EIGHTEEN NINETEEN TWENTY'.split(' ');
 const TENS = {2: 'TWENTY', 3: 'THIRTY', 4: 'FORTY', 5: 'FIFTY', 6: 'SIXTY', 7: 'SEVENTY', 8: 'EIGHTY', 9: 'NINETY'};
 const numWord = n => n <= 20 ? WORDS[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + WORDS[n % 10] : '');
+const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString([], {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'}); };
 const partWord = k => k == 1 ? 'Part One' : 'Part Two';
 function crop(s) {
   const c = {x: 50, y: 50, z: 1};
@@ -100,6 +101,7 @@ function viewHome() {
         <a class="part-card part${k}" href="#/part/${k}"><span class="kicker">${partWord(k)}</span>
           <span class="name">${esc(partName(k))}</span><span class="meta">${counts(k)} patterns</span></a>`).join('')}</div>
       ${S.edition ? `<p class="edition">${esc(S.edition)}</p>` : ''}
+      ${D.updated ? `<p class="updated">Content updated ${esc(fmtDate(D.updated))} from ${esc(String(D.source || '').startsWith('Google') ? 'the Google Sheet' : 'the spreadsheet file')}</p>` : ''}
     </div></div></div>`;
 }
 
