@@ -1,0 +1,50 @@
+# Builds the site from the spreadsheet and publishes it to GitHub Pages.
+# Runs when you click "Run workflow" (Actions tab → Update site) and on every push to main.
+name: Update site
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openpyxl pillow
+      - name: Read the spreadsheet and resize photos
+        run: python tools/update_site.py
+        env:
+          SHEET_ID: ${{ vars.SHEET_ID }}
+      - name: Collect the site files
+        run: |
+          mkdir -p _site/photos
+          cp -r index.html style.css app.js data.js fonts .nojekyll _site/
+          cp -r photos/web _site/photos/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

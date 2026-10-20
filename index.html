@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Natural Areas Pattern Book</title>
+<meta name="description" content="A pattern book for observing and caring for vacant land: the conditions we find, and the design patterns that respond to them.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <button class="menu-btn" id="menuBtn" aria-controls="side" aria-expanded="false">Patterns</button>
+  <a class="topbar-title" href="#/" id="topTitle"></a>
+  <a class="topbar-book" href="#/book">My book <span class="count" data-count></span></a>
+</header>
+
+<nav class="side" id="side" aria-label="Patterns">
+  <a class="brand" href="#/"><span class="kicker" id="brandKicker"></span><span class="brand-title" id="brandTitle"></span></a>
+  <div id="navParts"></div>
+  <a class="side-book" href="#/book"><span>My book</span> <span class="count" data-count></span></a>
+</nav>
+<div class="scrim" id="scrim"></div>
+
+<main id="main" tabindex="-1"></main>
+
+<div id="printRoot" aria-hidden="true"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
